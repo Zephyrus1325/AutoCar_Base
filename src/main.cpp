@@ -52,28 +52,63 @@
     while (network.available()) {  // Is there anything ready for us?
     
         RF24NetworkHeader header;  // If so, grab it and print it out
-        radioQueueData buffer;
-        network.read(header, &buffer, sizeof(radioQueueData));
-		log_message* msg = (log_message*) buffer.data;
-		chunk_data* chunk = (chunk_data*) buffer.data;
+        uint8_t buffer[150];
+        network.read(header, &buffer, network.peek(header));
+		
+        
+        log_message* msg = (log_message*) (buffer+2);
+		chunk_data* chunk = (chunk_data*) buffer;
 
-        switch(buffer.messageType){
+        if(buffer[0] == CHUNK_DATA){
+            //Serial.print(chunk->position.x);
+            //Serial.print(" | ");
+            //Serial.print(chunk->position.y);
+            //Serial.print(" | ");
+            //Serial.print(chunk->subdivision);
+            //Serial.print(" | ");
+            
+            
+            Serial.write(0xAA);
+            Serial.write(0x00);
+            Serial.write(chunk->subdivision);
+            uint8_t id = 0;
+            
+            if(chunk->position.x == -1 && chunk->position.y == -1){id = 0;}
+            else if(chunk->position.x == -1 && chunk->position.y == 0){id = 1;}
+            else if(chunk->position.x == -1 && chunk->position.y == 1){id = 2;}
+            else if(chunk->position.x == 0 && chunk->position.y == -1){id = 3;}
+            else if(chunk->position.x == 0 && chunk->position.y == 0){id = 4;}
+            else if(chunk->position.x == 0 && chunk->position.y == 1){id = 5;}
+            else if(chunk->position.x == 1 && chunk->position.y == -1){id = 6;}
+            else if(chunk->position.x == 1 && chunk->position.y == 0){id = 7;}
+            else if(chunk->position.x == 1 && chunk->position.y == 1){id = 8;}
+            
+            Serial.write(id);
+            for(int i = 0; i < 128; i++){
+                Serial.write(chunk->data[i]);
+            }
+            
+        }
+        
+        //Serial.print("X: ");
+        //Serial.print(chunk->position.x);
+        //Serial.print(" Y: ");
+        //Serial.print(chunk->position.y);
+        //Serial.print(" Subdiv: ");
+        //Serial.println(chunk->subdivision);
+        
+        /*
+        switch(buffer[0]){
             case LOG_MESSAGE:
                 Serial.print(msg->text);
                 break;
 			case CHUNK_DATA:
-				//Serial.print("Chunk Pos X: ");
-				//Serial.print(chunk->position.x);
-				//Serial.print(" Y: ");
-				//Serial.print(chunk->position.y);
-				//Serial.print(" Chunk Subdivision: ");
-				//Serial.println(chunk->subdivision);
+                
 				break;
 			default:
-				Serial.println("Received another type of data");
-                
-				
+				Serial.println("Received another type of data");		
         }
+                */
 
     }
  }
