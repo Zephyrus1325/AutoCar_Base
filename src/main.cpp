@@ -20,17 +20,18 @@
  #include <RF24Network.h>
  
  #include "radioEnum.h"
- 
+ #include "radioParse.h"
+
  RF24 radio(2, 4);  // nRF24L01(+) radio attached using Getting Started board
  
  RF24Network network(radio);      // Network uses that radio
  const uint16_t this_node = 00;   // Address of our node in Octal format (04, 031, etc)
- const uint16_t other_node = 01;  // Address of the other node in Octal format
+ const uint16_t car_address = 01;  // Address of the other node in Octal format
  
- 
- 
+ uint64_t lastTime = 0;
+
  void setup(void) {
-    Serial.begin(115200);
+    Serial.begin(921600);
     Serial.println(F("AutoCar V3 - Base Node"));
    
     if (!radio.begin()) {
@@ -42,73 +43,68 @@
     }
     radio.setChannel(90);
 	radio.setDataRate(RF24_250KBPS);
+    radio.setPALevel(RF24_PA_MIN);
     network.begin(/*node address*/ this_node);
  }
  
  void loop(void) {
  
     network.update();  // Check the network regularly
-  
+
     while (network.available()) {  // Is there anything ready for us?
     
         RF24NetworkHeader header;  // If so, grab it and print it out
-        uint8_t buffer[150];
-        network.read(header, &buffer, network.peek(header));
-		
-        
-        log_message* msg = (log_message*) (buffer+2);
-		chunk_data* chunk = (chunk_data*) buffer;
-
-        if(buffer[0] == CHUNK_DATA){
-            //Serial.print(chunk->position.x);
-            //Serial.print(" | ");
-            //Serial.print(chunk->position.y);
-            //Serial.print(" | ");
-            //Serial.print(chunk->subdivision);
-            //Serial.print(" | ");
-            
-            
-            Serial.write(0xAA);
-            Serial.write(0x00);
-            Serial.write(chunk->subdivision);
-            uint8_t id = 0;
-            
-            if(chunk->position.x == -1 && chunk->position.y == -1){id = 0;}
-            else if(chunk->position.x == -1 && chunk->position.y == 0){id = 1;}
-            else if(chunk->position.x == -1 && chunk->position.y == 1){id = 2;}
-            else if(chunk->position.x == 0 && chunk->position.y == -1){id = 3;}
-            else if(chunk->position.x == 0 && chunk->position.y == 0){id = 4;}
-            else if(chunk->position.x == 0 && chunk->position.y == 1){id = 5;}
-            else if(chunk->position.x == 1 && chunk->position.y == -1){id = 6;}
-            else if(chunk->position.x == 1 && chunk->position.y == 0){id = 7;}
-            else if(chunk->position.x == 1 && chunk->position.y == 1){id = 8;}
-            
-            Serial.write(id);
-            for(int i = 0; i < 128; i++){
-                Serial.write(chunk->data[i]);
-            }
-            
+        uint8_t buffer[600];
+        for(int i = 0; i < sizeof(buffer); i++){
+            buffer[i] = 0;
         }
+        uint16_t messlen = network.read(header, &buffer, sizeof(buffer));
         
-        //Serial.print("X: ");
-        //Serial.print(chunk->position.x);
-        //Serial.print(" Y: ");
-        //Serial.print(chunk->position.y);
-        //Serial.print(" Subdiv: ");
-        //Serial.println(chunk->subdivision);
-        
-        /*
-        switch(buffer[0]){
-            case LOG_MESSAGE:
-                Serial.print(msg->text);
-                break;
-			case CHUNK_DATA:
-                
-				break;
-			default:
-				Serial.println("Received another type of data");		
+        if(buffer[0] == CHUNK_DATA && messlen == sizeof(chunk_data)){
+            sendChunk((chunk_data*) buffer);
         }
-                */
+        if(buffer[0] == COMMAND && messlen == sizeof(command)){
+            readCommand((command*) buffer);
+        }
 
     }
+
+    if(millis() - lastTime > 100){
+        RF24NetworkHeader header(car_address);
+        uint8_t buffer[100];
+        network.write(header, &buffer, 32);
+        lastTime = millis();
+    }
+
+    if(Serial.available()){
+        int command = Serial.read();
+        radioQueueData buffer;
+        switch(command){
+            case 0:
+                buffer.messageType = STOP;
+                break;
+            case 1:
+                buffer.messageType = GO_FORWARD;
+                break;
+            case 2:
+                buffer.messageType = GO_BACK;
+                break;
+            case 3:
+                buffer.messageType = GO_LEFT;
+                break;
+            case 4:
+                buffer.messageType = GO_RIGHT;
+                break;
+            default:
+                buffer.messageType = 0xFF;
+                break;
+        }
+
+       
+        RF24NetworkHeader header(car_address);
+        
+        //network.write(header, &buffer, sizeof(radioQueueData));
+
+    }
+    
  }

@@ -28,6 +28,12 @@ enum message_type{
     CHUNK_METADATA = 0x40,      // Sender: CarV3
     CHUNK_DATA = 0x41,          // Sender: CarV3
 
+    GO_FORWARD = 0xA0,          // Sender: Base
+    GO_LEFT = 0xA1,             // Sender: Base
+    GO_RIGHT = 0xA2,            // Sender: Base
+    GO_BACK = 0xA3,             // Sender: Base
+    STOP = 0xA4,
+
     COMMAND = 0xFF              // Sender: Both
 };
 
@@ -95,12 +101,16 @@ struct chunk_data{
 };
 
 struct command{
+    uint8_t dataType = COMMAND;
     uint8_t command_type;
-    uint8_t parameters[31];
+    uint8_t parameters[30];
 };
 
 enum command_type{
     PING = 0,
+    END_OF_PACKET,
+    DATA_REQUEST,
+
 
     NAVIGATION_CHANGE_DESTINATION,
     NAVIGATION_CHANGE_MODE,

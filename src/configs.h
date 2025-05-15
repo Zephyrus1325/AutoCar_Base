@@ -22,7 +22,7 @@
 #define DELAY_LIDAR_DATA 1000
 #define DELAY_GPS_DATA 1000
 #define DELAY_MOTOR_DATA 100
-#define DELAY_CHUNK_DATA 1500
+#define DELAY_CHUNK_DATA 2000
 
 // SD config
 #define SD_QUEUE_SIZE 20        // Number of Read/Writes Queue
