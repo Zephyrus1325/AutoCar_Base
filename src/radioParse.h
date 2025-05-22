@@ -1,5 +1,7 @@
 #include <Arduino.h>
-#include <radioEnum.h>
+#include "radioEnum.h"
+
+extern uint8_t transmitRole;
 
 void sendChunk(chunk_data* chunk){
     Serial.write(0xAA);
@@ -19,13 +21,14 @@ void sendChunk(chunk_data* chunk){
 }
 
 void readCommand(command* comm){
+    //Serial.println(comm->command_type);
     switch(comm->command_type){
-        case DATA_REQUEST:
-            
+        case END_OF_PACKET:
+            //Serial.println("RECEIVED EOP");
+            transmitRole = 1;
             break;
-        case RADIO_CHANGE_PA:
+        default:
             break;
-        case PING:
-            break;
+
     }
 }
